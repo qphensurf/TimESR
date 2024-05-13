@@ -18,6 +18,16 @@ def get_dm( rho, dt, total_dim ):
    
    return rho_data
 
+def get_dm_sub( rho, dt ):
+   
+   num_dim = 4
+   
+   rho_data = np.zeros([num_dim,num_dim],dtype=complex)
+   for i in range(num_dim):
+      for j in range(num_dim):
+         rho_data[i,j] = rho[dt,i,j]   
+   return rho_data 
+
 def transform_dm( rho, u_matrix ):
    """
    Transform the density matrix using the unitary matrix

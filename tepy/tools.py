@@ -49,33 +49,76 @@ def plot_2d( ax_obj, x, y, xfact=1, yfact=1, swapxy=False, linewidth=1.5, marker
 
    ax_obj.plot( xplot, yplot, linewidth=linewidth, marker=marker, label=name, markersize=markersize )
    
-def get_neg_exp_curve( x, y ):
+def get_envelope( signal, height=0.8, distance=10 ):
+   from scipy.signal import find_peaks
+   peaks, _ = find_peaks(signal, height=height, distance=distance)
+   return peaks # peaks are locations
+
+def get_neg_exp_curve( x, y, ymin ):
+   from scipy.optimize import curve_fit
    
-   xmin_indx = np.nanargmax( y )
-   ymin = y[-1]
-   
+   xmin_indx = np.argmax(y)
+
    x_data, y_data = [], []
    for i, yval in enumerate(y[xmin_indx:]):
       if (yval >= ymin and not np.isnan(yval)):
          x_data.append(x[i])
          y_data.append(yval)
- 
+
    x_dat, y_dat = np.array(x_data), np.array(y_data)
-   
+
    # define type of function to search
    def model_func(x, a, k, b):
        return a * np.exp(-k*x) + b
 
-   #p0 = (1.0,1./500.,0.2) # starting search coefficients
-   opt, pcov = sp.optimize.curve_fit(model_func, x_dat, y_dat)#, p0)
+   #p0 = (1.0,1./2000.,0.8) # starting search coefficients
+   opt, pcov = curve_fit(model_func, x_dat, y_dat)#, p0)
    a, k, b = opt
    x_curve = np.linspace(x_dat[0],x_dat[-1],100)
-   print(xmin_indx,x[xmin_indx],x_data[0],x_data[-1],x_dat[0],x_dat[-1],x_curve[0],x_curve[-1])
    y_curve = model_func(x_curve, a, k, b)
 
    tau = 1./k
    
-   return x_curve, y_curve, tau
+   residuals = y_dat - model_func(x_dat, *opt)
+   ss_res = np.sum(residuals**2)
+   ss_tot = np.sum((y_dat - np.mean(y_dat))**2)
+   r_squared = 1.0 - (ss_res/ ss_tot)
+   
+   print("R squared value: ",r_squared)
+
+   return x_curve, y_curve, tau, a, k, b
+   
+def get_neg_linear_curve( x, y, ymin ):
+   from scipy.optimize import curve_fit
+   
+   xmin_indx = np.argmax(y)
+
+   x_data, y_data = [], []
+   for i, yval in enumerate(y[xmin_indx:]):
+      if (yval >= ymin and not np.isnan(yval)):
+         x_data.append(x[i])
+         y_data.append(yval)
+
+   x_dat, y_dat = np.array(x_data), np.array(y_data)
+
+   # define type of function to search
+   def model_func(x, k, b):
+       return -k * x + b
+
+   #p0 = (1.0,1./500.,0.2) # starting search coefficients
+   opt, pcov = curve_fit(model_func, x_dat, y_dat)#, p0)
+   k, b = opt
+   x_curve = np.linspace(x_dat[0],x_dat[-1],100)
+   y_curve = model_func(x_curve, k, b)
+
+   residuals = y_dat - model_func(x_dat, *opt)
+   ss_res = np.sum(residuals**2)
+   ss_tot = np.sum((y_dat - np.mean(y_dat))**2)
+   r_squared = 1.0 - (ss_res/ ss_tot)
+   
+   print("R squared value: ",r_squared)
+
+   return x_curve, y_curve, k, b
  
 def extract_peak_frequency(data, start, end, steps):
    """
